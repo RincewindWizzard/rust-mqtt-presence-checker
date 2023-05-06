@@ -13,3 +13,7 @@ serde = "^1.0.159"
 serde_derive = "^1.0.159"
 log = "0.4.17"
 directories = "5.0.1"
+rumqttc = "0.21.0"
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4.2.7", features = ["derive"] }
+stderrlog = "^0.5.4"
