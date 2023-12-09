@@ -74,13 +74,13 @@ impl<T, I, O> Actor<T, I, O> {
         }
 
         handles.push(thread::spawn(move || {
+            let sclone = self.clone();
             let result = receive_callback(self);
-
+            sclone.notify_all();
             result
         }));
 
         for handle in handles {
-            // handle.thread().unpark();
             handle.join().unwrap().unwrap();
         }
         Ok(())
@@ -98,18 +98,6 @@ impl<T, I, O> Actor<T, I, O> {
         let foo = lock.lock().unwrap();
 
         let _guard = cvar.wait(foo).unwrap();
-    }
-
-    fn join(&self) {
-        if let Some(rx) = &self.rx {
-            while let Ok(message) = rx.recv() {
-                // discard messages
-            }
-        } else {
-            // if !self.main.is_finished() {
-            //     self.main.join()
-            // }
-        }
     }
 }
 
@@ -133,15 +121,15 @@ mod tests {
     fn receiver(actor: Actor<State, MessageIn, MessageOut>) -> anyhow::Result<()> {
         if let Some(rx) = &actor.rx {
             while let Ok(message) = rx.recv() {
-                let mut state = actor.state.lock().unwrap();
-                (*state).count += 1;
+                {
+                    let mut state = actor.state.lock().unwrap();
+                    (*state).count += 1;
+                }
+                actor.notify_all();
             }
         }
 
-
         println!("Done receiving");
-        actor.notify_all();
-
         Ok(())
     }
 
@@ -152,8 +140,6 @@ mod tests {
         }
 
         actor.park();
-        //thread::sleep(Duration::from_secs(1));
-
 
         let count = {
             let mut state = actor.state.lock().unwrap();
