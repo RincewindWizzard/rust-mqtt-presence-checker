@@ -1,9 +1,9 @@
 use std::sync::{Arc, mpsc, Mutex};
-use std::sync::mpsc::{Receiver, Sender, SendError};
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
 use std::time::{Duration, Instant};
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow};
 use crate::minuterie::State::{ACTIVE, INACTIVE};
 
 const MINUTERIE: &str = "Minuterie";

@@ -1,8 +1,7 @@
 use std::sync::{Arc, Condvar, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-use std::thread::JoinHandle;
-use crate::minuterie::Minuterie;
+
 
 struct Actor<T, I, O> {
     state: Arc<Mutex<T>>,
@@ -87,7 +86,19 @@ impl<T, I, O> Actor<T, I, O> {
         Ok(())
     }
 
+    fn notify_all(&self) {
+        let (lock, cvar) = &*self.condition;
+        let foo = lock.lock().unwrap();
 
+        cvar.notify_all();
+    }
+
+    fn park(&self) {
+        let (lock, cvar) = &*self.condition;
+        let foo = lock.lock().unwrap();
+
+        let _guard = cvar.wait(foo).unwrap();
+    }
 
     fn join(&self) {
         if let Some(rx) = &self.rx {
@@ -105,9 +116,6 @@ impl<T, I, O> Actor<T, I, O> {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{stdout, Write};
-    use std::thread;
-    use std::time::Duration;
     use crate::actor::{Actor, ActorProxy};
 
     struct State {
@@ -132,12 +140,7 @@ mod tests {
 
 
         println!("Done receiving");
-        {
-            let (lock, cvar) = &*actor.condition;
-            let foo= lock.lock().unwrap();
-
-            cvar.notify_all();
-        }
+        actor.notify_all();
 
         Ok(())
     }
@@ -148,12 +151,7 @@ mod tests {
             (*state).count += 1000;
         }
 
-        {
-            let (lock, cvar) = &*actor.condition;
-            let foo= lock.lock().unwrap();
-
-            let _guard = cvar.wait(foo).unwrap();
-        }
+        actor.park();
         //thread::sleep(Duration::from_secs(1));
 
 
@@ -188,5 +186,6 @@ mod tests {
 
         let result = actor.rx.recv().unwrap();
         println!("Written and read! {}", result.count);
+        assert_eq!(result.count, 1010);
     }
 }
