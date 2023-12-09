@@ -1,8 +1,9 @@
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
 
 use std::time::{Duration, Instant};
+use anyhow::{anyhow, Context};
 use crate::minuterie::State::{ACTIVE, INACTIVE};
 
 const MINUTERIE: &str = "Minuterie";
@@ -31,11 +32,25 @@ pub enum State {
 }
 
 pub struct Minuterie {
-    last_event: Instant,
-    last_state: State,
+    last_instant: Arc<Mutex<Instant>>,
+    last_state: Arc<Mutex<State>>,
     timeout: Duration,
-    rx: Receiver<Event>,
+    rx: Option<Receiver<Event>>,
     tx: Sender<Event>,
+    stopped: Arc<Mutex<bool>>,
+}
+
+impl Clone for Minuterie {
+    fn clone(&self) -> Self {
+        Minuterie {
+            last_instant: self.last_instant.clone(),
+            last_state: self.last_state.clone(),
+            timeout: self.timeout,
+            rx: None,
+            tx: self.tx.clone(),
+            stopped: self.stopped.clone(),
+        }
+    }
 }
 
 
@@ -46,11 +61,12 @@ impl Minuterie {
 
         // create a minuterie with elapsed timeout so it is not currently active
         let mut minuterie = Minuterie {
-            last_event: Instant::now() - timeout,
-            last_state: State::ACTIVE,
+            last_instant: Arc::new(Mutex::new(Instant::now() - timeout)),
+            last_state: Arc::new(Mutex::new(State::ACTIVE)),
             timeout,
-            rx: input_rx,
+            rx: Some(input_rx),
             tx: output_tx,
+            stopped: Arc::new(Mutex::new(false)),
         };
 
         thread::spawn(move || {
@@ -59,31 +75,117 @@ impl Minuterie {
         (input_tx, output_rx)
     }
 
-    fn current_state(&self) -> State {
-        if Instant::now().duration_since(self.last_event) < self.timeout {
-            ACTIVE
+    fn get_current_state(&self) -> State {
+        if let Ok(last_instant) = self.last_instant.lock() {
+            if Instant::now().duration_since(*last_instant) < self.timeout {
+                ACTIVE
+            } else {
+                INACTIVE
+            }
         } else {
             INACTIVE
         }
     }
 
-    fn publish(&mut self) -> Result<(), SendError<Event>> {
-        let current_state = self.current_state();
-        if current_state != self.last_state {
+    fn get_last_state(&self) -> State {
+        let mut last_state = self.last_state.lock().unwrap();
+        *last_state
+    }
+
+    fn set_last_state(&self, state: State) {
+        let mut last_state = self.last_state.lock().unwrap();
+        *last_state = state;
+    }
+
+    fn get_last_instant(&self) -> Instant {
+        let mut last_instant = self.last_instant.lock().unwrap();
+        *last_instant
+    }
+
+    fn set_last_instant(&self, instant: Instant) {
+        let mut last_instant = self.last_instant.lock().unwrap();
+        *last_instant = instant;
+    }
+
+    fn stop(&mut self) {
+        let mut stopped = self.stopped.lock().unwrap();
+        *stopped = true;
+    }
+
+    fn is_stopped(&self) -> bool {
+        let stopped = self.stopped.lock().unwrap();
+        *stopped
+    }
+
+    fn publish(&mut self) -> anyhow::Result<()> {
+        let current_state = self.get_current_state();
+        if current_state != self.get_last_state() {
             self.tx.send(Event::from(MINUTERIE.to_string(), current_state))?;
         }
-        self.last_state = current_state;
+        self.set_last_state(current_state);
         Ok(())
     }
 
-    fn run(&mut self) -> Result<(), SendError<Event>> {
+    fn receive(&self) -> anyhow::Result<Event> {
+        if let Some(rx) = &self.rx {
+            Ok(rx.recv()?)
+        } else {
+            Err(anyhow!("Could not receive event!"))
+        }
+    }
+
+    fn wait_for_timeout(&self) {
+        let timeout_instant = if let Ok(last_instant) = self.last_instant.lock() {
+            *last_instant + self.timeout
+        } else {
+            Instant::now() + Duration::from_millis(100)
+        };
+
+        thread::sleep(timeout_instant.saturating_duration_since(Instant::now()));
+    }
+
+    fn timeout_counter(&mut self) -> anyhow::Result<()> {
         self.publish()?;
 
-        while let Ok(event) = self.rx.recv() {
-            self.last_event = event.instant;
+        while !self.is_stopped() {
+            println!("Waiting for timeout...");
+            self.wait_for_timeout();
             self.publish()?;
         }
-        Ok(())
+
+        anyhow::Ok(())
+    }
+
+    fn event_receiver(&mut self) -> anyhow::Result<()> {
+        while let Ok(event) = self.receive() {
+            self.set_last_instant(event.instant);
+            self.publish()?;
+        }
+        anyhow::Ok(())
+    }
+
+    fn run(mut self) -> anyhow::Result<()> {
+        let timeout_counter = {
+            let mut minuterie = self.clone();
+            thread::spawn(move || {
+                minuterie.timeout_counter()
+            })
+        };
+
+        let receiver = thread::spawn(move || {
+            let result = self.event_receiver();
+            self.stop();
+            result
+        });
+
+
+        let timeout_counter_result = timeout_counter.join();
+        let receiver_result = receiver.join();
+
+        match (timeout_counter_result, receiver_result) {
+            (Ok(_), Ok(_)) => Ok(()),
+            _ => Err(anyhow::anyhow!("Minuterie stopped"))
+        }
     }
 }
 
