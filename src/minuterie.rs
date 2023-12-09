@@ -1,13 +1,13 @@
-use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
-use std::thread::JoinHandle;
+
 use std::time::{Duration, Instant};
 use crate::minuterie::State::{ACTIVE, INACTIVE};
 
 const MINUTERIE: &str = "Minuterie";
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Event {
     pub instant: Instant,
     pub topic: String,
@@ -24,28 +24,18 @@ impl Event {
     }
 }
 
-#[derive(Debug)]
-enum State {
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum State {
     ACTIVE,
     INACTIVE,
 }
 
 pub struct Minuterie {
     last_event: Instant,
+    last_state: State,
     timeout: Duration,
     rx: Receiver<Event>,
     tx: Sender<Event>,
-}
-
-
-trait Publisher {
-    fn publish(&self, state: State) -> Result<(), SendError<Event>>;
-}
-
-impl Publisher for Sender<Event> {
-    fn publish(&self, state: State) -> Result<(), SendError<Event>> {
-        self.send(Event::from(MINUTERIE.to_string(), state))
-    }
 }
 
 
@@ -57,6 +47,7 @@ impl Minuterie {
         // create a minuterie with elapsed timeout so it is not currently active
         let mut minuterie = Minuterie {
             last_event: Instant::now() - timeout,
+            last_state: State::ACTIVE,
             timeout,
             rx: input_rx,
             tx: output_tx,
@@ -76,14 +67,21 @@ impl Minuterie {
         }
     }
 
-    fn run(&mut self) -> Result<(), SendError<Event>> {
-        let timeout = &self.timeout;
+    fn publish(&mut self) -> Result<(), SendError<Event>> {
+        let current_state = self.current_state();
+        if current_state != self.last_state {
+            self.tx.send(Event::from(MINUTERIE.to_string(), current_state))?;
+        }
+        self.last_state = current_state;
+        Ok(())
+    }
 
-        self.tx.publish(self.current_state())?;
+    fn run(&mut self) -> Result<(), SendError<Event>> {
+        self.publish()?;
 
         while let Ok(event) = self.rx.recv() {
             self.last_event = event.instant;
-            self.tx.publish(self.current_state())?;
+            self.publish()?;
         }
         Ok(())
     }
@@ -91,26 +89,42 @@ impl Minuterie {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Add;
     use std::thread;
     use std::time::{Duration, Instant};
-    use rand::Rng;
-    use crate::minuterie::{Event, Minuterie};
-    use crate::minuterie::State::ACTIVE;
+    use crate::minuterie::{Event, Minuterie, State};
 
     #[test]
     fn minuterie_timing() {
         let launch = Instant::now();
         let (tx, rx) = Minuterie::start(Duration::from_secs(1));
 
+
+        let input_events: Vec<Event> = [100u64, 500, 2000]
+            .iter()
+            .map(|t| Event {
+                instant: launch.add(Duration::from_millis(*t)),
+                topic: format!("input"),
+                content: State::ACTIVE,
+            }).collect();
+
+
         thread::spawn(move || {
-            for i in 1..10 {
-                let mut rng = rand::thread_rng();
-                thread::sleep(Duration::from_millis(rng.gen_range(0..100)));
-                tx.send(Event::from(format!("Test-{i}"), ACTIVE)).unwrap();
+            for event in input_events {
+                let now = Instant::now();
+                let wait_duration = event.instant.saturating_duration_since(now);
+                thread::sleep(wait_duration);
+                assert!(event.instant < Instant::now());
+                tx.send(event).unwrap();
             }
+
+            // wait for timeout to expire
+            thread::sleep(Duration::from_secs(2));
         });
 
+        let mut events = vec![];
         while let Ok(event) = rx.recv() {
+            events.push(event.clone());
             println!(
                 "Event({}, {}, {:?})",
                 event.instant.duration_since(launch).as_millis(),
@@ -118,5 +132,7 @@ mod tests {
                 event.content
             )
         }
+
+        assert_eq!(events.len(), 3);
     }
 }
