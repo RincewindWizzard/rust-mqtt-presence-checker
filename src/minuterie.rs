@@ -1,12 +1,11 @@
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 
-use std::thread;
+use std::{fmt, thread};
 use std::time::{Duration, Instant};
 
 
 use crate::minuterie::State::{ACTIVE, INACTIVE};
-
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +15,7 @@ pub struct StateChange {
     /// New state
     pub state: State,
 }
+
 
 /// Represents a measurement of presence.
 /// This could be a ping response from your mobile, a movement or door sensor
@@ -50,6 +50,14 @@ pub enum State {
     INACTIVE,
 }
 
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            State::ACTIVE => write!(f, "ACTIVE"),
+            State::INACTIVE => write!(f, "INACTIVE"),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Minuterie {

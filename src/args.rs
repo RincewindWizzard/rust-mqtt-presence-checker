@@ -6,6 +6,7 @@ use clap::Parser;
 use confy::ConfyError;
 use directories::ProjectDirs;
 use log::{debug, error};
+use rumqttc::MqttOptions;
 use serde::{Deserialize, Serialize};
 use crate::minuterie::Minuterie;
 
@@ -55,8 +56,15 @@ impl ApplicationContext {
 
 impl ApplicationContext {
     pub(crate) fn construct() -> anyhow::Result<ApplicationContext> {
+        let args = Args::parse();
         let project_dirs = ApplicationContext::project_dirs().ok_or(anyhow!("Could not load project dirs!"))?;
-        let config = confy::load_path(crate::args::ApplicationContext::config_file_path(&project_dirs))?;
+
+        let config = confy::load_path(if let Some(path) = args.config {
+            PathBuf::from(path)
+        } else {
+            ApplicationContext::config_file_path(&project_dirs)
+        })?;
+
 
         Ok(ApplicationContext {
             project_dirs,
@@ -83,8 +91,9 @@ pub(crate) struct Args {
     #[arg(short, long, action = clap::ArgAction::Count)]
     pub(crate) verbose: u8,
 
+    /// Path to config file
     #[arg(short, long)]
-    config_file: Option<String>,
+    config: Option<String>,
 
     /// no stdout printing
     #[arg(short, long)]
@@ -119,6 +128,7 @@ impl Default for ApplicationConfig {
                 host: "127.0.0.1".to_string(),
                 username: "username".to_string(),
                 password: "password".to_string(),
+                port: 1883,
                 topic: "mqtt-presence-checker/home/".to_string(),
             },
         }
@@ -159,6 +169,20 @@ pub(crate) struct Mqtt {
     pub(crate) host: String,
     pub(crate) username: String,
     pub(crate) password: String,
+    pub(crate) port: u16,
     pub(crate) topic: String,
+}
+
+impl From<&Mqtt> for MqttOptions {
+    fn from(config: &Mqtt) -> Self {
+        let mut mqttoptions = MqttOptions::new(
+            env!("CARGO_PKG_NAME"),
+            &config.host,
+            config.port,
+        );
+        mqttoptions.set_keep_alive(Duration::from_secs(5));
+        mqttoptions.set_credentials(&config.username, &config.password);
+        mqttoptions
+    }
 }
 
