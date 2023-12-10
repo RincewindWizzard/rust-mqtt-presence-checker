@@ -1,14 +1,12 @@
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, RecvError, RecvTimeoutError, Sender};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::actor::Actor;
-use crate::minuterie;
+
 use crate::minuterie::State::{ACTIVE, INACTIVE};
 
-const MINUTERIE: &str = "Minuterie";
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,6 +23,14 @@ pub struct StateChange {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Heartbeat {
     pub instant: Instant,
+}
+
+impl Default for Heartbeat {
+    fn default() -> Self {
+        Heartbeat {
+            instant: Instant::now(),
+        }
+    }
 }
 
 
@@ -131,7 +137,7 @@ mod tests {
     use std::ops::Add;
     use std::thread;
     use std::time::{Duration, Instant};
-    use crate::minuterie::{StateChange, Minuterie, State, Heartbeat};
+    use crate::minuterie::{Minuterie, State, Heartbeat};
     use crate::minuterie::State::{ACTIVE, INACTIVE};
 
     fn assert_timing(timeout: u64, input_events: &[u64], expected: &[(u64, State)]) {

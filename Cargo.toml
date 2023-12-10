@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 rand = "0.8.5"
+regex = "1.10.2"
