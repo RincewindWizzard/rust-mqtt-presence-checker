@@ -7,5 +7,10 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-rand = "0.8.5"
-regex = "1.10.2"
+clap = { version = "4.4.11", features = ["derive"] }
+stderrlog = "^0.5.4"
+log = "^0.4.20"
+directories = "^5.0.1"
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0.108"
+confy = "0.5.1"

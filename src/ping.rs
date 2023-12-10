@@ -5,7 +5,6 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, UNIX_EPOCH};
-use regex::Regex;
 use crate::minuterie::Heartbeat;
 
 
