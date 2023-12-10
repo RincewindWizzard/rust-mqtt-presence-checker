@@ -7,6 +7,7 @@ use confy::ConfyError;
 use directories::ProjectDirs;
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
+use crate::minuterie::Minuterie;
 
 const DEBUG_APPLICATION_CONTEXT_PATH: &str = "application_context";
 const CONFIG_FILE_NAME: &str = "main.toml";
@@ -93,9 +94,9 @@ pub(crate) struct Args {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub(crate) struct ApplicationConfig {
-    minuterie: MinuterieConfig,
-    mqtt: Mqtt,
-    ping: PingConfig,
+    pub(crate) minuterie: MinuterieConfig,
+    pub(crate) mqtt: Mqtt,
+    pub(crate) ping: PingConfig,
 }
 
 impl Default for ApplicationConfig {
@@ -129,23 +130,35 @@ pub(crate) struct MinuterieConfig {
     timeout: u64,
 }
 
+impl MinuterieConfig {
+    pub(crate) fn get_timeout(&self) -> Duration {
+        Duration::from_millis(self.timeout)
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub(crate) struct PingConfig {
-    hosts: Vec<PingProbe>,
+    pub(crate) hosts: Vec<PingProbe>,
 }
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub(crate) struct PingProbe {
-    host: String,
+    pub(crate) host: String,
     interval: u64,
+}
+
+impl PingProbe {
+    pub(crate) fn get_interval(&self) -> Duration {
+        Duration::from_millis(self.interval)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub(crate) struct Mqtt {
-    host: String,
-    username: String,
-    password: String,
-    topic: String,
+    pub(crate) host: String,
+    pub(crate) username: String,
+    pub(crate) password: String,
+    pub(crate) topic: String,
 }
 

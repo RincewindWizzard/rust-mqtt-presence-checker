@@ -1,4 +1,4 @@
-
+use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -31,6 +31,21 @@ fn main() {
 
 
     debug!("{:?}", context);
+
+    let mut heartbeats = vec![];
+    for probe in context.config.ping.hosts {
+        heartbeats.push(ping(probe.host.clone(), probe.get_interval()))
+    }
+
+    let (minuterie_tx, state_changes) = Minuterie::new(context.config.minuterie.get_timeout());
+
+    merge_channels(heartbeats, minuterie_tx);
+
+
+
+    while let Ok(state) = state_changes.recv() {
+        debug!("{:?} {:?}", state.state, state.instant.duration_since(context.launch).as_millis());
+    }
 
     // let ping_interval = Duration::from_millis(1000);
     // let ping_hosts = [

@@ -5,6 +5,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, UNIX_EPOCH};
+use log::trace;
 use crate::minuterie::Heartbeat;
 
 
@@ -29,7 +30,7 @@ pub fn ping(host: String, interval: Duration) -> Receiver<Heartbeat> {
             // Read lines from stdout while the command is running
             for line in reader.lines() {
                 if let Ok(line) = line {
-                    println!("{}", line);
+                    trace!("{}", line);
                     if line.starts_with("[") {
                         tx.send(Heartbeat::default())?;
                     }
