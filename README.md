@@ -28,6 +28,12 @@ This is rather rudimentary and might crash or behave strange. Feel free
 to [fork me on github](https://github.com/RincewindWizzard/rust-mqtt-presence-checker) and send a PR if you find any
 bug!
 
+Create a system user and group for this daemon:
+
+    $ sudo groupadd -r mqtt-presence-checker
+    $ sudo useradd -r -g mqtt-presence-checker -s /bin/false -M mqtt-presence-checker
+
+
 Create a systemd unit file to always run it in the background.
 /etc/systemd/system/mqtt-presence-checker.service:
 
@@ -37,7 +43,7 @@ Create a systemd unit file to always run it in the background.
     
     [Service]
     Type=simple
-    ExecStart=/opt/mqtt-presence-checker
+    ExecStart=/opt/mqtt-presence-checker/mqtt-presence-checker
     Restart=always
     RestartSec=5
     User=mqtt-presence-checker

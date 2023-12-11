@@ -1,5 +1,6 @@
 use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
+
 use crate::minuterie::Heartbeat;
 
 /// connects multiple receivers to the same sender

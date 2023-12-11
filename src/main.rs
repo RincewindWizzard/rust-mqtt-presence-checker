@@ -1,16 +1,11 @@
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread;
-use std::time::{Duration, Instant};
-use clap::Parser;
-use directories::ProjectDirs;
-use log::{debug, error, info, trace, warn};
+use log::debug;
+use rumqttc::MqttOptions;
+
 use crate::args::ApplicationContext;
 use crate::channel_utility::merge_channels;
-use crate::minuterie::{Heartbeat, Minuterie};
+use crate::minuterie::Minuterie;
+use crate::mqtt::mqtt_connect;
 use crate::ping::ping;
-use rumqttc::{MqttOptions, Client, QoS};
-use crate::mqtt::{mqtt_connect};
 
 mod minuterie;
 mod ping;

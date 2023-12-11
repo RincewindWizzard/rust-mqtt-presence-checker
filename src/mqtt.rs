@@ -1,17 +1,15 @@
-use std::io::Bytes;
 use std::io::ErrorKind::ConnectionRefused;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
 use std::time::Duration;
-use anyhow::anyhow;
+
 use log::{debug, error, trace, warn};
 use rumqttc::{Client, ConnectionError, Event, MqttOptions, QoS};
 use rumqttc::ConnectionError::Io;
 use rumqttc::Packet::Publish;
-use crate::args::ApplicationContext;
-use crate::minuterie::{Heartbeat, StateChange, State};
 
+use crate::minuterie::{Heartbeat, StateChange};
 
 /// Connects to a mqtt server and listens on the heartbeat_topic.
 /// Every Statechange sent will be published to the publish_topic.
@@ -24,7 +22,7 @@ pub fn mqtt_connect(mqtt_options: MqttOptions, heartbeat_topic: &str, publish_to
 
     if let Ok(_) = client.subscribe(heartbeat_topic, QoS::AtMostOnce) {
         thread::spawn(move || {
-            for (i, notification) in connection.iter().enumerate() {
+            for (_, notification) in connection.iter().enumerate() {
                 trace!("MQTT notification: {:?}", notification);
                 if notification.is_err() {
                     if let Err(Io(err)) = &notification {

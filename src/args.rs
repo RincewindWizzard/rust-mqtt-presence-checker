@@ -1,20 +1,21 @@
 use std::fs;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
+
 use anyhow::anyhow;
 use clap::Parser;
 use directories::ProjectDirs;
-use log::{debug};
+use log::debug;
 use rumqttc::MqttOptions;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
 
 #[cfg(debug_assertions)]
 const DEBUG_APPLICATION_CONTEXT_PATH: &str = "application_context";
 
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub(crate) struct ApplicationContext {
     pub(crate) project_dirs: ProjectDirs,
     pub(crate) args: Args,
@@ -28,7 +29,7 @@ impl ApplicationContext {
     pub fn project_dirs() -> Option<ProjectDirs> {
         let exe_path = std::env::current_exe().unwrap();
         let mut data_path = PathBuf::from(exe_path.parent()?);
-        data_path.push("application_context");
+        data_path.push(DEBUG_APPLICATION_CONTEXT_PATH);
 
         debug!("Create path: {}", data_path.display());
         fs::create_dir_all(&data_path).expect("Data Path can not be created!");

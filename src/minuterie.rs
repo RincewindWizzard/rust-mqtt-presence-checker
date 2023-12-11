@@ -1,13 +1,11 @@
+use std::{fmt, thread};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
-
-use std::{fmt, thread};
 use std::time::{Duration, Instant};
+
 use serde::Serialize;
 
-
 use crate::minuterie::State::{ACTIVE, INACTIVE};
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct StateChange {
@@ -19,8 +17,6 @@ pub struct StateChange {
 }
 
 
-
-
 /// Represents a measurement of presence.
 /// This could be a ping response from your mobile, a movement or door sensor
 /// or everything else which senses your presence.
@@ -29,8 +25,7 @@ pub struct Heartbeat {
     pub instant: Instant,
 }
 
-
-
+/// Creates a heartbeat with the current instant.
 impl Default for Heartbeat {
     fn default() -> Self {
         Heartbeat {
@@ -151,7 +146,8 @@ mod tests {
     use std::ops::Add;
     use std::thread;
     use std::time::{Duration, Instant};
-    use crate::minuterie::{Minuterie, State, Heartbeat};
+
+    use crate::minuterie::{Heartbeat, Minuterie, State};
     use crate::minuterie::State::{ACTIVE, INACTIVE};
 
     fn assert_timing(timeout: u64, input_events: &[u64], expected: &[(u64, State)]) {
