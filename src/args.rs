@@ -1,17 +1,18 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::time::{Duration, Instant};
 use anyhow::anyhow;
 use clap::Parser;
-use confy::ConfyError;
 use directories::ProjectDirs;
-use log::{debug, error};
+use log::{debug};
 use rumqttc::MqttOptions;
 use serde::{Deserialize, Serialize};
-use crate::minuterie::Minuterie;
+use uuid::Uuid;
 
+
+#[cfg(debug_assertions)]
 const DEBUG_APPLICATION_CONTEXT_PATH: &str = "application_context";
-const CONFIG_FILE_NAME: &str = "main.toml";
+
 
 #[derive(Debug)]
 pub(crate) struct ApplicationContext {
@@ -77,7 +78,7 @@ impl ApplicationContext {
 
     fn config_file_path(project_dirs: &ProjectDirs) -> PathBuf {
         let mut config_file_path = PathBuf::from(project_dirs.config_dir());
-        config_file_path.push(CONFIG_FILE_NAME);
+        config_file_path.push(format!("{}.toml", env!("CARGO_PKG_NAME")));
         config_file_path
     }
 }
@@ -129,7 +130,8 @@ impl Default for ApplicationConfig {
                 username: "username".to_string(),
                 password: "password".to_string(),
                 port: 1883,
-                topic: "mqtt-presence-checker/home/".to_string(),
+                publish_topic: "mqtt-presence-checker/home/".to_string(),
+                heartbeat_topic: "presence-checker1/home/heartbeat".to_string(),
             },
         }
     }
@@ -170,13 +172,14 @@ pub(crate) struct Mqtt {
     pub(crate) username: String,
     pub(crate) password: String,
     pub(crate) port: u16,
-    pub(crate) topic: String,
+    pub(crate) publish_topic: String,
+    pub(crate) heartbeat_topic: String,
 }
 
 impl From<&Mqtt> for MqttOptions {
     fn from(config: &Mqtt) -> Self {
         let mut mqttoptions = MqttOptions::new(
-            env!("CARGO_PKG_NAME"),
+            format!("{}-{}", env!("CARGO_PKG_NAME"), Uuid::new_v4()),
             &config.host,
             config.port,
         );

@@ -14,3 +14,4 @@ pub fn merge_channels(rxs: Vec<Receiver<Heartbeat>>, tx: Sender<Heartbeat>) {
         });
     }
 }
+

@@ -5,21 +5,21 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, UNIX_EPOCH};
-use log::trace;
+use log::{debug, trace};
 use crate::minuterie::Heartbeat;
 
 
-
+/// Pings a host every interval.
+/// Every response triggers a heartbeat which is send to the receiver
 pub fn ping(host: String, interval: Duration) -> Receiver<Heartbeat> {
-
     let (tx, rx) = mpsc::channel();
 
-    let result : JoinHandle<anyhow::Result<ExitStatus>> = thread::spawn(move || {
+    let result: JoinHandle<anyhow::Result<ExitStatus>> = thread::spawn(move || {
         let mut child = Command::new("ping")
             .arg("-i")// Wait interval seconds between sending each packet.
             .arg(interval.as_secs_f64().to_string())
             .arg("-D")
-            .arg(host)
+            .arg(&host)
             .stdout(Stdio::piped())
             .spawn()?;
 
@@ -32,6 +32,7 @@ pub fn ping(host: String, interval: Duration) -> Receiver<Heartbeat> {
                 if let Ok(line) = line {
                     trace!("{}", line);
                     if line.starts_with("[") {
+                        debug!("Heartbeat from {host}");
                         tx.send(Heartbeat::default())?;
                     }
                 }

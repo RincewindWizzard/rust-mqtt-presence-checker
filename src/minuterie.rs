@@ -3,18 +3,22 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 
 use std::{fmt, thread};
 use std::time::{Duration, Instant};
+use serde::Serialize;
 
 
 use crate::minuterie::State::{ACTIVE, INACTIVE};
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct StateChange {
     /// Timestamp of the state change
+    #[serde(skip)]
     pub instant: Instant,
     /// New state
     pub state: State,
 }
+
+
 
 
 /// Represents a measurement of presence.
@@ -24,6 +28,8 @@ pub struct StateChange {
 pub struct Heartbeat {
     pub instant: Instant,
 }
+
+
 
 impl Default for Heartbeat {
     fn default() -> Self {
@@ -44,7 +50,7 @@ impl From<State> for StateChange {
 }
 
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
 pub enum State {
     ACTIVE,
     INACTIVE,
