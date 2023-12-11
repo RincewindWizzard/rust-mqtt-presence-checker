@@ -3,7 +3,20 @@
 Check if you (or your phone) is at home and notify your smarthome via mqtt.
 You can configure this daemon via a toml file in _/etc/mqtt-presence-checker/mqtt-presence-checker.conf_.
 
-/etc/mqtt-presence-checker/mqtt-presence-checker.conf:
+This is rather rudimentary and might crash or behave strange. Feel free
+to [fork me on github](https://github.com/RincewindWizzard/rust-mqtt-presence-checker) and send a PR if you find any
+bug!
+
+## Building
+
+First you need to install [Rust](https://www.rust-lang.org/tools/install).
+Then you can build with:
+
+    $ cargo build --release
+
+## Configuration
+
+Configuration is done via _/etc/mqtt-presence-checker/mqtt-presence-checker.conf_:
 
     [minuterie]
     timeout = 60000
@@ -24,18 +37,14 @@ You can configure this daemon via a toml file in _/etc/mqtt-presence-checker/mqt
     host = '192.168.178.2'
     interval = 1000
 
-This is rather rudimentary and might crash or behave strange. Feel free
-to [fork me on github](https://github.com/RincewindWizzard/rust-mqtt-presence-checker) and send a PR if you find any
-bug!
-
 Create a system user and group for this daemon:
 
     $ sudo groupadd -r mqtt-presence-checker
     $ sudo useradd -r -g mqtt-presence-checker -s /bin/false -M mqtt-presence-checker
 
-
 Create a systemd unit file to always run it in the background.
-/etc/systemd/system/mqtt-presence-checker.service:
+
+_/etc/systemd/system/mqtt-presence-checker.service_:
 
     [Unit]
     Description=MQTT Presence Checker
