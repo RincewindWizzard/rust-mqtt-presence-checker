@@ -99,7 +99,10 @@ impl Minuterie {
     }
 
     fn run(&mut self) -> anyhow::Result<()> {
+        // announce yourself at boot
+        self.tx.send(StateChange::from(INACTIVE))?;
         loop {
+
             let heartbeat = self.recv();
             if let Ok(heartbeat) = heartbeat {
                 self.last_instant = heartbeat.instant;
@@ -199,6 +202,7 @@ mod tests {
             100,
             &[10, 50, 200, 500, 610, 611, 612, 613],
             &[
+                (0, INACTIVE),
                 (10, ACTIVE),
                 (150, INACTIVE),
                 (200, ACTIVE),

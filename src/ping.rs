@@ -22,6 +22,7 @@ pub fn ping(host: String, interval: Duration) -> Receiver<Heartbeat> {
             .arg("-D")
             .arg(&host)
             .stdout(Stdio::piped())
+            .env("LANG", "en_US.UTF-8")
             .spawn()?;
 
         // Retrieve stdout as a handle to read line by line
@@ -32,7 +33,7 @@ pub fn ping(host: String, interval: Duration) -> Receiver<Heartbeat> {
             for line in reader.lines() {
                 if let Ok(line) = line {
                     trace!("{}", line);
-                    if line.starts_with("[") {
+                    if line.starts_with("[") && !line.contains("Destination Host Unreachable") {
                         debug!("Heartbeat from {host}");
                         tx.send(Heartbeat::default())?;
                     }

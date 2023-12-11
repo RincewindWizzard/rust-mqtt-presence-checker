@@ -1,4 +1,3 @@
-use std::io::ErrorKind::ConnectionRefused;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, SendError};
 use std::thread;
@@ -6,7 +5,6 @@ use std::time::Duration;
 
 use log::{debug, error, trace, warn};
 use rumqttc::{Client, ConnectionError, Event, MqttOptions, QoS};
-use rumqttc::ConnectionError::Io;
 use rumqttc::Packet::Publish;
 
 use crate::minuterie::{Heartbeat, StateChange};
@@ -25,12 +23,16 @@ pub fn mqtt_connect(mqtt_options: MqttOptions, heartbeat_topic: &str, publish_to
             for (_, notification) in connection.iter().enumerate() {
                 trace!("MQTT notification: {:?}", notification);
                 if notification.is_err() {
-                    if let Err(Io(err)) = &notification {
-                        if err.kind() == ConnectionRefused {
+                    if let Err(rumqttc::ConnectionError::ConnectionRefused(code)) = notification {
+                        warn!("Error in connection with mqtt: {:?}", code);
+                    }
+
+                    if let Err(rumqttc::ConnectionError::Io(err)) = &notification {
+                        if err.kind() == std::io::ErrorKind::ConnectionRefused {
                             warn!("Error in connection with mqtt: {}", err.to_string());
-                            thread::sleep(Duration::from_secs(10));
                         }
                     }
+                    thread::sleep(Duration::from_secs(10));
                 }
 
                 if let Some(heartbeat) = on_incoming_message(notification) {

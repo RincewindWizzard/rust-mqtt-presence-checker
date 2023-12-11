@@ -19,7 +19,7 @@ Then you can build with:
 Configuration is done via _/etc/mqtt-presence-checker/mqtt-presence-checker.conf_:
 
     [minuterie]
-    timeout = 60000
+    timeout = 60
     
     [mqtt]
     host = 'example.org'
@@ -31,16 +31,21 @@ Configuration is done via _/etc/mqtt-presence-checker/mqtt-presence-checker.conf
 
     [[ping.hosts]]
     host = '192.168.178.1'
-    interval = 60000
+    interval = 60
     
     [[ping.hosts]]
     host = '192.168.178.2'
-    interval = 1000
+    interval = 1
 
 Create a system user and group for this daemon:
 
     $ sudo groupadd -r mqtt-presence-checker
     $ sudo useradd -r -g mqtt-presence-checker -s /bin/false -M mqtt-presence-checker
+
+Create the log file
+
+    $ sudo touch /var/log/mqtt-presence-checker.log
+    $ sudo chown mqtt-presence-checker:mqtt-presence-checker /var/log/mqtt-presence-checker.log
 
 Create a systemd unit file to always run it in the background.
 
@@ -52,11 +57,13 @@ _/etc/systemd/system/mqtt-presence-checker.service_:
     
     [Service]
     Type=simple
-    ExecStart=/opt/mqtt-presence-checker/mqtt-presence-checker
+    ExecStart=mqtt-presence-checker -vv -c /etc/mqtt-presence-checker/mqtt-presence-checker.conf
     Restart=always
     RestartSec=5
     User=mqtt-presence-checker
     Group=mqtt-presence-checker
+    StandardOutput=file:/var/log/mqtt-presence-checker.log
+    StandardError=file:/var/log/mqtt-presence-checker.log
     
     [Install]
     WantedBy=default.target

@@ -1,3 +1,4 @@
+
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -12,6 +13,8 @@ use uuid::Uuid;
 #[cfg(debug_assertions)]
 const DEBUG_APPLICATION_CONTEXT_PATH: &str = "application_context";
 
+#[cfg(debug_assertions)]
+use std::fs;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -116,15 +119,15 @@ impl Default for ApplicationConfig {
                 hosts: vec![
                     PingProbe {
                         host: "fritz.box".to_string(),
-                        interval: 1000,
+                        interval: 1,
                     },
                     PingProbe {
                         host: "google.de".to_string(),
-                        interval: 1000,
+                        interval: 1,
                     },
                 ]
             },
-            minuterie: MinuterieConfig { timeout: 1000 },
+            minuterie: MinuterieConfig { timeout: 60 },
             mqtt: Mqtt {
                 host: "127.0.0.1".to_string(),
                 username: "username".to_string(),
@@ -144,7 +147,7 @@ pub(crate) struct MinuterieConfig {
 
 impl MinuterieConfig {
     pub(crate) fn get_timeout(&self) -> Duration {
-        Duration::from_millis(self.timeout)
+        Duration::from_secs(self.timeout)
     }
 }
 
@@ -162,7 +165,7 @@ pub(crate) struct PingProbe {
 
 impl PingProbe {
     pub(crate) fn get_interval(&self) -> Duration {
-        Duration::from_millis(self.interval)
+        Duration::from_secs(self.interval)
     }
 }
 
