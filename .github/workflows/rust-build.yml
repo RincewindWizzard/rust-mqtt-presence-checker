@@ -8,18 +8,30 @@ on:
     branches:
       - main
 
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION_STABLE: 1.51.0
+  RUST_VERSION_NIGHTLY: nightly-2021-03-25
+  MUTAGEN_COMMIT: f8249256c40769c916b5b00bd284f204d5540588
+  COV_THRESHOLD: 100.0
+  MUTAGEN_THRESHOLD: 100.0
+  CRATE_PATHS: .
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
 
+  test:
+    runs-on: ubuntu-18.04
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v2
-
-      - name: Set up Rust
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          rust-version: 1.71.0
-
-      - name: Build Rust code
-        run: cargo build --release
+          toolchain: ${{ env.RUST_VERSION_STABLE }}
+          profile: minimal
+          override: true
+      - name: Build
+        run: cargo build --all-targets
+      - name: Test
+        run: cargo test
